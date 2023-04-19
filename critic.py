@@ -39,7 +39,7 @@ class Critic(nn.Module):
         self.l6 = nn.Linear(256, 1)
 
     def forward(self, state, action):
-        sa = torch.cat([state, action], 1)
+        sa = torch.cat([state, action], 2)
 
         q1 = F.relu(self.l1(sa))
         q1 = F.relu(self.l2(q1))
@@ -51,7 +51,7 @@ class Critic(nn.Module):
         return q1, q2
 
     def Q1(self, state, action):
-        sa = torch.cat([state, action], 1)
+        sa = torch.cat([state, action], 2)
 
         q1 = F.relu(self.l1(sa))
         q1 = F.relu(self.l2(q1))

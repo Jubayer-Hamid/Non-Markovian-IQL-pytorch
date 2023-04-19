@@ -73,6 +73,8 @@ if __name__ == "__main__":
     parser.add_argument('--eval_episodes', default=10, type=int)
     parser.add_argument('--save_video', default=False, action='store_true')
     parser.add_argument("--normalize", default=False, action='store_true')
+    # Non-Markovian Experiment
+    parser.add_argument('--k', default=5, type=int)
     # IQL
     parser.add_argument("--batch_size", default=256, type=int)      # Batch size for both actor and critic
     parser.add_argument("--temperature", default=3.0, type=float)
@@ -125,10 +127,12 @@ if __name__ == "__main__":
     env.action_space.seed(args.seed)
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
+    env.observation_space = gym.spaces.Box(low=float('-inf'), high=float('inf'), shape=(args.k, 29))
+    env.action_space = gym.spaces.Box(low=-1, high=1, shape=(args.k,8))
 
-    state_dim = env.observation_space.shape[0]
-    action_dim = env.action_space.shape[0]
-    max_action = float(env.action_space.high[0])
+    state_dim = env.observation_space.shape[1]
+    action_dim = env.action_space.shape[1]
+    # max_action = float(env.action_space.high[0])
 
     kwargs = {
         "state_dim": state_dim,
@@ -161,7 +165,7 @@ if __name__ == "__main__":
     video = VideoRecorder(dir_name=args.video_dir)
 
     for t in trange(int(args.max_timesteps)):
-        policy.train(replay_buffer, args.batch_size, logger=logger)
+        policy.train(replay_buffer, args.batch_size, logger=logger, k=args.k)
         # Evaluate episode
         if (t + 1) % args.eval_freq == 0:
             eval_episodes = 100 if t+1 == int(args.max_timesteps) else args.eval_episodes

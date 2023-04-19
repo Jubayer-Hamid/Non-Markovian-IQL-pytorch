@@ -101,11 +101,11 @@ class IQL(object):
         state = torch.FloatTensor(state.reshape(1, -1)).to(device)
         return self.actor.get_action(state).cpu().data.numpy().flatten()
 
-    def train(self, replay_buffer, batch_size=256, logger=None):
+    def train(self, replay_buffer, batch_size=256, logger=None, k=0):
         self.total_it += 1
 
         # Sample replay buffer
-        state, action, next_state, reward, not_done = replay_buffer.sample(batch_size)
+        state, action, next_state, reward, not_done = replay_buffer.sample(batch_size, k)
 
         # Update
         self.update_v(state, action, logger)

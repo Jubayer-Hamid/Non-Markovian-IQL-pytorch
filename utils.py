@@ -33,15 +33,20 @@ class ReplayBuffer(object):
         self.ptr = (self.ptr + 1) % self.max_size
         self.size = min(self.size + 1, self.max_size)
 
-    def sample(self, batch_size):
-        ind = np.random.randint(0, self.size, size=batch_size)
+    def sample(self, batch_size, k):
+        indx = np.random.randint(self.size - k, size=batch_size)
+        window = []
+        for j in range(batch_size):
+            i = indx[j]
+            window.append(np.arange(i, i + k))
+        window = np.array(window) # 2d list [batch_size, k]
 
         return (
-            torch.FloatTensor(self.state[ind]).to(self.device),
-            torch.FloatTensor(self.action[ind]).to(self.device),
-            torch.FloatTensor(self.next_state[ind]).to(self.device),
-            torch.FloatTensor(self.reward[ind]).to(self.device),
-            torch.FloatTensor(self.not_done[ind]).to(self.device)
+            torch.FloatTensor(self.state[window]).to(self.device),
+            torch.FloatTensor(self.action[window]).to(self.device),
+            torch.FloatTensor(self.next_state[window]).to(self.device),
+            torch.FloatTensor(self.reward[window]).to(self.device),
+            torch.FloatTensor(self.not_done[window]).to(self.device)
         )
 
     def convert_D4RL(self, dataset):
