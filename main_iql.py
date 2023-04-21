@@ -20,7 +20,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # A fixed seed is used for the eval environment
 
 
-def eval_policy(args, iter, video: VideoRecorder, logger: Logger, policy, env_name, seed, mean, std, seed_offset=100, eval_episodes=10):
+def eval_policy(args, iter, video: VideoRecorder, logger: Logger, policy, env_name, seed, mean, std, seed_offset=100, eval_episodes=10, k=5):
     eval_env = gym.make(env_name)
     eval_env.seed(seed + seed_offset)
 
@@ -30,13 +30,19 @@ def eval_policy(args, iter, video: VideoRecorder, logger: Logger, policy, env_na
     for _ in range(eval_episodes):
         video.init(enabled=(args.save_video and _ == 0))
         state, done = eval_env.reset(), False
+        state = state.reshape(1, 1, -1)
         video.record(eval_env)
         steps = 0
         episode_return = 0
         while not done:
-            state = (np.array(state).reshape(1, -1) - mean)/std
+            state = (state - mean)/std
             action = policy.select_action(state)
-            state, reward, done, _ = eval_env.step(action)
+            action = action[0, -1, :]
+            next_state, reward, done, _ = eval_env.step(action)
+            next_state = next_state.reshape(1, 1, -1)
+            state = np.concatenate((state, next_state), axis=1)
+            if state.shape[1] > k: #change k here (2)
+              state = state[:, -k:, :] #change k here (1)
             video.record(eval_env)
             avg_reward += reward
             episode_return += reward
@@ -59,9 +65,7 @@ def eval_policy(args, iter, video: VideoRecorder, logger: Logger, policy, env_na
     print("---------------------------------------")
     return d4rl_score
 
-
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     # Experiment
     parser.add_argument("--policy", default="IQL")               # Policy name
@@ -85,6 +89,8 @@ if __name__ == "__main__":
     parser.add_argument('--work_dir', default='tmp', type=str)
     args = parser.parse_args()
     args.cooldir = generate_slug(2)
+
+    print('DEVICE: ', device)
 
     # Build work dir
     base_dir = 'runs'

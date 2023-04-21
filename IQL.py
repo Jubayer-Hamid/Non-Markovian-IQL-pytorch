@@ -98,8 +98,8 @@ class IQL(object):
         logger.log('train/adv', (q - v).mean(), self.total_it)
 
     def select_action(self, state):
-        state = torch.FloatTensor(state.reshape(1, -1)).to(device)
-        return self.actor.get_action(state).cpu().data.numpy().flatten()
+        state = torch.FloatTensor(state).to(device)
+        return self.actor.get_action(state).cpu().data.numpy()
 
     def train(self, replay_buffer, batch_size=256, logger=None, k=0):
         self.total_it += 1

@@ -30,10 +30,10 @@ class Actor(nn.Module):
         # mu, log_std = self.mlp(states).chunk(2, dim=-1)
 
         # mu = torch.tanh(mu) # good
-
         outputs = self.lstm(states)[0]
-        # print(outputs.shape)
+        # print(f'outputs.shape {outputs.shape}')
         means = self.lstm_dense(outputs)
+        # print(f'means.shape {means.shape}')
         log_std = self.state_dependent_std_dense(outputs)
         
         means = torch.tanh(means)
