@@ -2,7 +2,8 @@ import torch
 import torch.nn as nn
 import torch.distributions
 from common import MLP
-
+from torch.distributions.normal import Normal
+from torch.distributions.independent import Independent
 
 class Actor(nn.Module):
     """MLP actor network."""
@@ -21,6 +22,8 @@ class Actor(nn.Module):
         self.lstm_dense = nn.Linear(hidden_dim, action_dim)
         self.state_dependent_std_dense = nn.Linear(hidden_dim, action_dim)
 
+        self.log_stds = nn.Parameter(torch.zeros(action_dim,))
+
         self.log_std_min = log_std_min
         self.log_std_max = log_std_max
 
@@ -34,17 +37,26 @@ class Actor(nn.Module):
         # print(f'outputs.shape {outputs.shape}')
         means = self.lstm_dense(outputs)
         # print(f'means.shape {means.shape}')
-        log_std = self.state_dependent_std_dense(outputs)
+        log_stds = self.log_stds #self.state_dependent_std_dense(outputs)
         
+        log_stds = torch.clip(log_stds, self.log_std_min, self.log_std_max)
+
         means = torch.tanh(means)
 
-        # means = nn.functional.normalize(means, dim=-1)
-        
-        # normal = torch.distributions.Normal(means, log_std)
-        # base_dist = torch.distributions.Independent(normal, 1)
+        scale_diag = torch.exp(log_stds)
 
-        return means
+        # print(f'means: {means.shape}; scale_diag: {scale_diag.shape}')
+        base_dist = Independent(Normal(means, scale_diag), 1)
+        
+        # base_dist = tfd.MultivariateNormalDiag(loc=means,
+        #                                        scale_diag=jnp.exp(log_stds) *
+        #                                                   temperature)        
+
+        # print(f'base_dist: {base_dist}')
+
+        return base_dist
 
     def get_action(self, states):
-        mu = self.forward(states)
-        return mu
+        dist = self.forward(states)
+        action = dist.sample()
+        return action

@@ -86,8 +86,10 @@ class IQL(object):
             exp_a = torch.exp((q - v) * self.temperature)
             exp_a = torch.clamp(exp_a, max=100.0).squeeze(-1).detach()
 
-        mu = self.actor(states)
-        actor_loss = (exp_a.unsqueeze(-1) * ((mu - actions)**2)).mean()
+        dist = self.actor(states)
+        log_probs = dist.log_prob(actions) 
+        actor_loss = -(exp_a * log_probs).mean()
+        # actor_loss = (exp_a.unsqueeze(-1) * ((mu - actions)**2)).mean()
 
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
